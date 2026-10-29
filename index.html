@@ -1,1 +1,536 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>廣福直笛團・冠軍之路</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101e30;color:#edf4ff;font:16px system-ui,sans-serif}main{max-width:1000px;margin:auto;padding:24px}h1{font-size:clamp(26px,5vw,42px);margin:10px 0}h2{font-size:21px}p{line-height:1.7;color:#b9cadd}.tag{color:#f7ce7a;letter-spacing:3px}.panel{background:#1a2c43;border:1px solid #36516c;border-radius:18px;padding:20px;margin:16px 0}.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.row>*{flex:1}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.value{font-size:28px;color:#f7ce7a}button,select,textarea{font:inherit;border-radius:10px;border:1px solid #59728d;padding:12px}button{background:#f7ce7a;color:#152237;font-weight:700;cursor:pointer;min-height:48px;touch-action:manipulation}button:disabled{opacity:.4;cursor:default}button.secondary{background:#29435e;color:white}select,textarea{background:#102035;color:white;width:100%}textarea{height:130px}progress{width:100%;accent-color:#73d7c4}small{color:#b9cadd}#clock{font-variant-numeric:tabular-nums}#message{min-height:28px;color:#90e5d1}canvas{display:block;width:100%;height:auto;border-radius:12px;background:#0c1726}#pads{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}#pads button{font-size:23px;background:#35687d;color:white}#pads button:active{background:#cb9d4b}#stage{font-size:28px;text-align:center;letter-spacing:12px;padding:12px}details{margin-top:16px}summary{cursor:pointer}table{width:100%;border-collapse:collapse}td,th{text-align:left;padding:10px;border-bottom:1px solid #36516c}[hidden]{display:none!important}@media(max-width:550px){main{padding:12px}.panel{padding:14px}.stats{gap:6px}.value{font-size:24px}.row button{flex-basis:40%}}
+</style>
+</head>
+<body>
+<main>
+<div class="tag">RECORDER ENSEMBLE / 第一版</div>
+<h1>廣福直笛團 · 冠軍之路</h1>
+<p>帶領團員練習，在 150 秒內完成決賽並奪冠。時間到或未奪冠，5 秒後自動重開。</p>
 
+<div class="panel stats">
+  <div><small>剩餘時間</small><div id="clock" class="value">02:30</div></div>
+  <div><small>目前階段</small><div id="phase" class="value">準備</div></div>
+  <div><small>挑戰次數</small><div id="attempt" class="value">0</div></div>
+</div>
+
+<section id="intro" class="panel">
+  <h2>從練習室走上冠軍舞台</h2>
+  <p>
+    ① 練指法、氣息與合奏，疲勞高時先休息。<br>
+    ② 請老師指導，每位老師每局限一次。<br>
+    ③ 進入決賽後，音符落到金色線時按下對應按鈕，或鍵盤 D、F、J、K。<br>
+    ④ 團隊準備占 40%，節奏表現占 60%；必須超過對手最高分 86 分才奪冠。
+  </p>
+  <button id="start">開始挑戰</button>
+</section>
+
+<section id="training" class="panel" hidden>
+  <h2>練習室 <small id="leader"></small></h2>
+  <div id="stage">♪ ♫ ♪ ♫ ♪</div>
+  <div class="stats">
+    <div>指法 <b id="s0"></b><progress id="b0" max="100"></progress></div>
+    <div>氣息 <b id="s1"></b><progress id="b1" max="100"></progress></div>
+    <div>默契 <b id="s2"></b><progress id="b2" max="100"></progress></div>
+  </div>
+  <p>疲勞：<b id="fatigue">0</b> / 100　｜　每次練習間隔 1 秒</p>
+  <div class="row">
+    <button data-train="0">指法練習 +8</button>
+    <button data-train="1">長音練習 +8</button>
+    <button data-train="2">全團合奏 +8</button>
+    <button id="rest" class="secondary">休息：疲勞 −35</button>
+  </div>
+  <h2>老師指導</h2>
+  <div id="teachers" class="row"></div>
+  <p id="advice">建議三項能力至少練到 85，再挑戰決賽。請預留 25 秒完成演奏。</p>
+  <button id="compete">進入決賽 →</button>
+</section>
+
+<section id="concert" class="panel" hidden>
+  <div class="row">
+    <h2>冠軍決賽</h2>
+    <span id="combo">連擊 0 · 命中 0 / 32</span>
+  </div>
+  <p>音符到金線時點按。Perfect ±0.13 秒；Good ±0.26 秒。亂按會扣分。</p>
+  <canvas id="board" width="800" height="420"
+    aria-label="四軌節奏遊戲，音符落到金色線時按對應按鈕"></canvas>
+  <div id="pads">
+    <button data-lane="0">D<br>Do</button>
+    <button data-lane="1">F<br>Re</button>
+    <button data-lane="2">J<br>Mi</button>
+    <button data-lane="3">K<br>Sol</button>
+  </div>
+</section>
+
+<div id="message" role="status" aria-live="polite">準備好一起拿冠軍了嗎？</div>
+
+<section id="result" class="panel" hidden>
+  <h2 id="resultTitle"></h2>
+  <p id="resultText"></p>
+  <table>
+    <thead><tr><th>名次</th><th>隊伍</th><th>分數</th></tr></thead>
+    <tbody id="ranking"></tbody>
+  </table>
+  <p id="restartText"></p>
+  <button id="again">再挑戰一次</button>
+</section>
+
+<details id="settings" class="panel">
+  <summary>團員、老師與遊戲設定</summary>
+  <p>依照片可見姓名建立名單，重複姓名先合併；照片未完整顯示所有 45 個帳號。可修正姓名，每行一人。能力、老師技能與對手均為虛構遊戲設定。</p>
+  <label>團員名單<textarea id="names"></textarea></label>
+  <label>本局領奏<select id="captain"></select></label>
+  <p>所有團員共同參與練團；領奏在練習畫面顯示，不影響能力。名單修改於下一局套用。</p>
+  <button id="apply" class="secondary">更新名單</button>
+  <button id="sound" class="secondary">音效：開</button>
+</details>
+</main>
+
+<script>
+'use strict';
+
+const $ = id => document.getElementById(id);
+
+const INITIAL_NAMES = [
+  '王芷萱','王苡安','吳妤芯','吳奕叡','李丹瑜',
+  '李沛璇','李昱慧','李柏叡','杜允珩','沈映蓁',
+  '沈曉綺','周家妤','林灼禕','林星震','林逸姍',
+  '林禎家','林鈺璇','俞文心','姚玫芳','洪筱彤',
+  '徐妤榛','張卉妮','張宥宥','張紘郡','許家芯',
+  '許珮歆','許馨予','陳中芙','陳真玲','曾玟潔',
+  '黃子庭','黃禹菁','黃琳蓁','黃靖瑄','楊文耀',
+  '蔡婷亘','蔡瑋恬','鄭博遠','賴羿瑄','鍾允瑜'
+];
+
+const TEACHERS = [
+  ['陳幸瑜','指法 +15',0],
+  ['黃淑琬','氣息 +15',1],
+  ['廖淑美','默契 +15',2]
+];
+
+const LIMIT = 150;
+const COUNT = 32;
+
+let state = 'idle';
+let attempt = 0;
+let deadline = 0;
+let stats = [45,45,45];
+let fatigue = 0;
+let cooldown = 0;
+let used = new Set();
+let notes = [];
+let musicStart = 0;
+let points = 0;
+let hits = 0;
+let combo = 0;
+let restartAt = 0;
+let roster = [];
+let audio = null;
+let muted = false;
+let feedback = '';
+let feedbackAt = 0;
+
+const ctx = $('board').getContext('2d');
+
+function say(text) {
+  $('message').textContent = text;
+}
+
+function applyNames() {
+  roster = [...new Set(
+    $('names').value.split(/\n/).map(s => s.trim()).filter(Boolean)
+  )];
+
+  if (!roster.length) roster = ['直笛團員'];
+
+  const previous = $('captain').value;
+  $('captain').replaceChildren(...roster.map(name => {
+    const o = document.createElement('option');
+    o.textContent = name;
+    o.value = name;
+    return o;
+  }));
+
+  if (roster.includes(previous)) $('captain').value = previous;
+  say('名單已更新，共 ' + roster.length + ' 位團員。');
+}
+
+function sound(lane) {
+  if (muted) return;
+
+  try {
+    audio = audio || new (
+      window.AudioContext || window.webkitAudioContext
+    )();
+    audio.resume();
+
+    const o = audio.createOscillator();
+    const g = audio.createGain();
+    const t = audio.currentTime;
+
+    o.type = 'sine';
+    o.frequency.value = [523.25,587.33,659.25,783.99][lane];
+    g.gain.setValueAtTime(0,t);
+    g.gain.linearRampToValueAtTime(.12,t + .015);
+    g.gain.exponentialRampToValueAtTime(.001,t + .22);
+
+    o.connect(g);
+    g.connect(audio.destination);
+    o.start(t);
+    o.stop(t + .23);
+  } catch (e) {}
+}
+
+function show() {
+  $('intro').hidden = state !== 'idle';
+  $('training').hidden = state !== 'training';
+  $('concert').hidden = state !== 'concert';
+  $('result').hidden = !['won','lost'].includes(state);
+
+  $('phase').textContent = {
+    idle:'準備',
+    training:'練團',
+    concert:'決賽',
+    won:'冠軍',
+    lost:'重整'
+  }[state];
+
+  $('attempt').textContent = attempt;
+
+  stats.forEach((v,i) => {
+    $('s' + i).textContent = v;
+    $('b' + i).value = v;
+  });
+
+  $('fatigue').textContent = fatigue;
+
+  document.querySelectorAll('[data-teacher]').forEach(b => {
+    b.disabled = used.has(Number(b.dataset.teacher));
+  });
+}
+
+function start() {
+  applyNames();
+  attempt++;
+  state = 'training';
+  deadline = Date.now() + LIMIT * 1000;
+  stats = [45,45,45];
+  fatigue = 0;
+  cooldown = 0;
+  used = new Set();
+  notes = [];
+  points = 0;
+  hits = 0;
+  combo = 0;
+  restartAt = 0;
+  feedback = '';
+
+  $('leader').textContent =
+    '領奏：' + $('captain').value + ' · ' + roster.length + ' 位團員';
+
+  $('settings').open = false;
+  $('ranking').replaceChildren();
+  say('練團開始！三項均衡訓練，記得休息。');
+  show();
+  sound(0);
+}
+
+function checkTime() {
+  if (
+    ['training','concert'].includes(state) &&
+    Date.now() >= deadline
+  ) {
+    finish(false,'時間到了，還沒完成奪冠！');
+    return false;
+  }
+  return true;
+}
+
+function act(type) {
+  if (!checkTime() || state !== 'training') return;
+
+  if (Date.now() < cooldown) {
+    say('稍等一下，團員正在完成上一個動作。');
+    return;
+  }
+
+  if (type === 'rest') {
+    fatigue = Math.max(0,fatigue - 35);
+    say('全團休息，疲勞下降。');
+  } else {
+    if (fatigue >= 80) {
+      say('團員累了，請先休息。');
+      return;
+    }
+
+    stats[type] = Math.min(100,stats[type] + 8);
+    fatigue = Math.min(100,fatigue + 12);
+    say([
+      '指法更熟練了！',
+      '長音更穩定了！',
+      '團隊更有默契了！'
+    ][type]);
+    sound(type);
+  }
+
+  cooldown = Date.now() + 1000;
+  show();
+}
+
+function teach(i) {
+  if (!checkTime() || state !== 'training' || used.has(i)) return;
+
+  used.add(i);
+  stats[i] = Math.min(100,stats[i] + 15);
+  say(TEACHERS[i][0] + '老師指導：' + TEACHERS[i][1]);
+  show();
+  sound(i);
+}
+
+function compete() {
+  if (!checkTime() || state !== 'training') return;
+
+  if (deadline - Date.now() < 25000) {
+    say('剩餘時間不足 25 秒，仍可演奏，但時間到就會重開。');
+  } else {
+    say('看準金線再按！鍵盤 D / F / J / K，平板直接點下方按鈕。');
+  }
+
+  state = 'concert';
+  musicStart = Date.now();
+
+  const melody = [0,0,3,3,2,2,1,0,3,2,1,1,2,3,0,2];
+
+  notes = Array.from({length:COUNT},(_,i) => ({
+    lane:melody[i % melody.length],
+    time:2 + i * .65,
+    done:false
+  }));
+
+  points = 0;
+  hits = 0;
+  combo = 0;
+  show();
+}
+
+function hit(lane) {
+  if (!checkTime() || state !== 'concert') return;
+
+  const t = (Date.now() - musicStart) / 1000;
+  const n = notes
+    .filter(n => !n.done && n.lane === lane)
+    .sort((a,b) => Math.abs(a.time - t) - Math.abs(b.time - t))[0];
+
+  const d = n ? Math.abs(n.time - t) : Infinity;
+
+  if (d <= .26) {
+    n.done = true;
+    hits++;
+    combo++;
+    points += d <= .13 ? 1 : .7;
+    feedback = d <= .13 ? 'Perfect！' : 'Good！';
+    sound(lane);
+  } else {
+    points -= .15;
+    combo = 0;
+    feedback = '太早、太晚或按錯聲部';
+  }
+
+  feedbackAt = Date.now();
+}
+
+function finish(won,reason,score) {
+  if (!['training','concert'].includes(state)) return;
+
+  state = won ? 'won' : 'lost';
+  restartAt = won ? 0 : Date.now() + 5000;
+
+  $('resultTitle').textContent =
+    won ? '🏆 廣福直笛團奪冠！' : '再接再厲！';
+
+  $('resultText').textContent = reason;
+
+  const rows = [
+    ['晨光直笛團',86],
+    ['星河合奏團',80],
+    ['青葉音樂團',74]
+  ];
+
+  if (score !== undefined) rows.push(['廣福直笛團',score]);
+  rows.sort((a,b) => b[1] - a[1]);
+
+  $('ranking').replaceChildren(...rows.map((r,i) => {
+    const tr = document.createElement('tr');
+
+    [i + 1,r[0],r[1].toFixed(1)].forEach(v => {
+      const td = document.createElement('td');
+      td.textContent = v;
+      tr.append(td);
+    });
+
+    return tr;
+  }));
+
+  $('restartText').textContent = won
+    ? '冠軍達成！可以再挑戰更高分。'
+    : '5 秒後自動重新開始。';
+
+  say(won
+    ? '每一個聲部，都成就了這座獎盃。'
+    : '這次的能力與分數將重置，團員名單保留。'
+  );
+
+  show();
+}
+
+function judge() {
+  const preparation = stats.reduce((a,b) => a + b,0) / 3;
+  const rhythm = Math.max(0,points) / COUNT * 100;
+  const score = Math.round((preparation * .4 + rhythm * .6) * 10) / 10;
+
+  finish(
+    score > 86,
+    '準備 ' + preparation.toFixed(1) + ' 分 ×40% ＋ 演奏 ' +
+    rhythm.toFixed(1) + ' 分 ×60% ＝ ' + score.toFixed(1) + ' 分。' +
+    (score > 86
+      ? '恭喜拿下第一名！'
+      : '必須超過 86 分才能奪冠，同分不算勝出。'),
+    score
+  );
+}
+
+function draw(t) {
+  ctx.clearRect(0,0,800,420);
+
+  for (let i = 0; i < 4; i++) {
+    ctx.fillStyle = i % 2 ? '#15263a' : '#102034';
+    ctx.fillRect(i * 200,0,198,420);
+    ctx.fillStyle = '#c4d8eb';
+    ctx.font = '22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText(
+      ['D · Do','F · Re','J · Mi','K · Sol'][i],
+      i * 200 + 100,
+      399
+    );
+  }
+
+  ctx.fillStyle = '#f7ce7a';
+  ctx.fillRect(0,338,800,4);
+
+  notes.forEach(n => {
+    if (n.done) return;
+
+    const y = 340 - (n.time - t) * 150;
+
+    if (y > -30 && y < 380) {
+      ctx.fillStyle = [
+        '#79ded0','#8bbfff','#d3a5f5','#f6c67b'
+      ][n.lane];
+      ctx.fillRect(n.lane * 200 + 45,y - 12,110,24);
+    }
+  });
+
+  if (Date.now() - feedbackAt < 650) {
+    ctx.fillStyle = 'white';
+    ctx.font = 'bold 28px sans-serif';
+    ctx.fillText(feedback,400,65);
+  }
+}
+
+function tick() {
+  if (['training','concert'].includes(state)) {
+    const left = Math.max(0,Math.ceil((deadline - Date.now()) / 1000));
+
+    $('clock').textContent =
+      String(Math.floor(left / 60)).padStart(2,'0') + ':' +
+      String(left % 60).padStart(2,'0');
+
+    if (checkTime() && state === 'concert') {
+      const t = (Date.now() - musicStart) / 1000;
+
+      notes.forEach(n => {
+        if (!n.done && t > n.time + .26) {
+          n.done = true;
+          combo = 0;
+          feedback = 'Miss';
+          feedbackAt = Date.now();
+        }
+      });
+
+      $('combo').textContent =
+        '連擊 ' + combo + ' · 命中 ' + hits + ' / ' + COUNT;
+
+      draw(t);
+
+      if (t > notes[COUNT - 1].time + .7) judge();
+    }
+  }
+
+  if (state === 'lost') {
+    $('restartText').textContent =
+      Math.max(0,Math.ceil((restartAt - Date.now()) / 1000)) +
+      ' 秒後自動重新開始。';
+
+    if (Date.now() >= restartAt) start();
+  }
+
+  requestAnimationFrame(tick);
+}
+
+$('names').value = INITIAL_NAMES.join('\n');
+applyNames();
+
+TEACHERS.forEach((t,i) => {
+  const b = document.createElement('button');
+  b.className = 'secondary';
+  b.dataset.teacher = i;
+  b.textContent = t[0] + '｜' + t[1];
+  b.onclick = () => teach(i);
+  $('teachers').append(b);
+});
+
+$('start').onclick = start;
+$('again').onclick = start;
+$('apply').onclick = applyNames;
+$('rest').onclick = () => act('rest');
+$('compete').onclick = compete;
+
+$('sound').onclick = () => {
+  muted = !muted;
+  $('sound').textContent = '音效：' + (muted ? '關' : '開');
+};
+
+document.querySelectorAll('[data-train]').forEach(b => {
+  b.onclick = () => act(Number(b.dataset.train));
+});
+
+document.querySelectorAll('[data-lane]').forEach(b => {
+  b.onpointerdown = e => {
+    e.preventDefault();
+    hit(Number(b.dataset.lane));
+  };
+});
+
+document.addEventListener('keydown',e => {
+  if (e.repeat || /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+
+  const lane = ['d','f','j','k'].indexOf(e.key.toLowerCase());
+
+  if (lane >= 0 && state === 'concert') {
+    e.preventDefault();
+    hit(lane);
+  }
+});
+
+show();
+requestAnimationFrame(tick);
+</script>
+</body>
+</html>
